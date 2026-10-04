@@ -254,9 +254,9 @@ export default function AdminStudioProject() {
             Upload a DWG, DXF, or PDF. The issue time is set by the server and cannot be changed or deleted. Issue a new revision instead.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <Input required placeholder="Sheet title" value={drawing.title} onChange={(e) => setDrawing({ ...drawing, title: e.target.value })} className="rounded-none" />
-            <Input required placeholder="Sheet number (A-101)" value={drawing.sheetNumber} onChange={(e) => setDrawing({ ...drawing, sheetNumber: e.target.value })} className="rounded-none" />
-            <Input required placeholder="Revision (P01)" value={drawing.revision} onChange={(e) => setDrawing({ ...drawing, revision: e.target.value })} className="rounded-none" />
+            <Input placeholder="Sheet title" value={drawing.title} onChange={(e) => setDrawing({ ...drawing, title: e.target.value })} className="rounded-none" />
+            <Input placeholder="Sheet number (A-101)" value={drawing.sheetNumber} onChange={(e) => setDrawing({ ...drawing, sheetNumber: e.target.value })} className="rounded-none" />
+            <Input placeholder="Revision (P01)" value={drawing.revision} onChange={(e) => setDrawing({ ...drawing, revision: e.target.value })} className="rounded-none" />
             <select value={drawing.discipline} onChange={(e) => setDrawing({ ...drawing, discipline: e.target.value })} className="border border-border bg-background h-9 px-2 text-sm">
               {DISCIPLINES.map((item) => <option key={item} value={item}>{item}</option>)}
             </select>
