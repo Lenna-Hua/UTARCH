@@ -2,7 +2,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { eq, asc } from "drizzle-orm";
 import { db, projectsTable } from "@workspace/db";
 import { paramId } from "../lib/params";
-import { requireAdmin, isAdminSession } from "../middlewares/requireAdmin";
+import { requireAdmin, isAdminSession, sessionUserId } from "../middlewares/requireAdmin";
 
 const router: IRouter = Router();
 
@@ -26,6 +26,9 @@ function mapProject(p: typeof projectsTable.$inferSelect) {
     plans: (p.plans as { title: string; url: string }[]) ?? [],
     sortOrder: p.sortOrder,
     published: p.published,
+    startsOn: p.startsOn ?? "",
+    endsOn: p.endsOn ?? "",
+    phase: p.phase ?? "",
     createdAt: p.createdAt.toISOString(),
   };
 }
@@ -48,6 +51,9 @@ type ProjectBody = {
   plans?: { title: string; url: string }[];
   sortOrder?: number;
   published?: boolean;
+  startsOn?: string;
+  endsOn?: string;
+  phase?: string;
 };
 
 function pickProjectFields(
@@ -71,6 +77,9 @@ function pickProjectFields(
   plans: { title: string; url: string }[];
   sortOrder: number;
   published: boolean;
+  startsOn: string;
+  endsOn: string;
+  phase: string;
 } | null;
 function pickProjectFields(
   body: ProjectBody,
@@ -95,6 +104,9 @@ function pickProjectFields(body: ProjectBody, mode: "create" | "update") {
   if (body.plans !== undefined) data.plans = body.plans;
   if (body.sortOrder !== undefined) data.sortOrder = body.sortOrder;
   if (body.published !== undefined) data.published = body.published;
+  if (body.startsOn !== undefined) data.startsOn = body.startsOn;
+  if (body.endsOn !== undefined) data.endsOn = body.endsOn;
+  if (body.phase !== undefined) data.phase = body.phase;
 
   if (mode === "create") {
     if (!body.title || !body.client || !body.subtitle || !body.role || !body.focus || !body.tools) {
@@ -118,6 +130,9 @@ function pickProjectFields(body: ProjectBody, mode: "create" | "update") {
       plans: body.plans ?? [],
       sortOrder: body.sortOrder ?? 0,
       published: body.published ?? false,
+      startsOn: body.startsOn ?? "",
+      endsOn: body.endsOn ?? "",
+      phase: body.phase ?? "",
     };
   }
 
@@ -179,7 +194,10 @@ router.post("/projects", requireAdmin, async (req: Request, res: Response) => {
     return;
   }
   try {
-    const inserted = await db.insert(projectsTable).values(values).returning();
+    const inserted = await db
+      .insert(projectsTable)
+      .values({ ...values, createdBy: sessionUserId(req) })
+      .returning();
     res.status(201).json(mapProject(inserted[0]!));
   } catch (err) {
     req.log.error({ err }, "Error creating project");

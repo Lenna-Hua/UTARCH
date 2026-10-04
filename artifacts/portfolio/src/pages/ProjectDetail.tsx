@@ -227,6 +227,15 @@ export default function ProjectDetail() {
             { label: "ROLE", value: project.role },
             { label: "FOCUS", value: project.focus },
             { label: "TOOLS", value: project.tools },
+            ...((project as { phase?: string }).phase
+              ? [{ label: "PHASE", value: (project as { phase?: string }).phase as string }]
+              : []),
+            ...((project as { startsOn?: string }).startsOn
+              ? [{
+                  label: "PROGRAMME",
+                  value: `${(project as { startsOn?: string }).startsOn}${(project as { endsOn?: string }).endsOn ? ` → ${(project as { endsOn?: string }).endsOn}` : ""}`,
+                }]
+              : []),
           ].map((item) => (
             <div key={item.label} className="p-4 border-b md:border-b-0 border-border">
               <span className="mono text-[10px] text-muted-foreground uppercase block mb-1">{item.label}</span>

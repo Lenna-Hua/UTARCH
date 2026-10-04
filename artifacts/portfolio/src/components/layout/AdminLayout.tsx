@@ -1,9 +1,11 @@
 import { Link, useLocation } from "wouter";
 import { useAdminLogout, useAdminMe } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
-import { Loader2, LogOut, LayoutDashboard, FolderKanban, FileText, Wrench, Settings, Upload } from "lucide-react";
+import { Loader2, LogOut, LayoutDashboard, FolderKanban, FileText, Wrench, Settings, Upload, Building2 } from "lucide-react";
 import { useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { studioJson, type AuthMe } from "@/lib/studio-api";
 
 export function AdminLayout({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
@@ -15,6 +17,11 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
   });
   const logout = useAdminLogout();
   const { toast } = useToast();
+  const { data: me } = useQuery({
+    queryKey: ["auth-me"],
+    queryFn: () => studioJson<AuthMe>("/api/auth/me"),
+    enabled: Boolean(auth?.authenticated),
+  });
 
   useEffect(() => {
     if (!isLoading && !auth?.authenticated) {
@@ -39,6 +46,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
 
   const navItems = [
     { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/admin/studio", label: "Studio", icon: Building2 },
     { href: "/admin/projects", label: "Projects", icon: FolderKanban },
     { href: "/admin/posts", label: "Posts", icon: FileText },
     { href: "/admin/skills", label: "Skills", icon: Wrench },
@@ -74,7 +82,13 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
             })}
           </nav>
         </div>
-        <div className="p-4 border-t border-border shrink-0">
+        <div className="p-4 border-t border-border shrink-0 space-y-3">
+          {me?.user ? (
+            <div className="text-xs">
+              <div className="font-medium truncate">{me.user.name}</div>
+              <div className="text-muted-foreground truncate">{me.user.email}</div>
+            </div>
+          ) : null}
           <Button variant="outline" className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10" onClick={handleLogout}>
             <LogOut className="w-4 h-4 mr-2" />
             Logout

@@ -48,7 +48,10 @@ export const projectSchema = z.object({
     url: z.string().min(1, "Required"),
   })).optional(),
   sortOrder: z.coerce.number().optional(),
-  published: z.boolean().optional()
+  published: z.boolean().optional(),
+  startsOn: z.string().optional(),
+  endsOn: z.string().optional(),
+  phase: z.string().optional(),
 });
 
 export const postSchema = z.object({
