@@ -1,10 +1,12 @@
 {
   "installCommand": "pnpm install",
   "buildCommand": "pnpm --filter @workspace/portfolio build && rm -rf public && mkdir -p public && cp -a artifacts/portfolio/dist/public/. public/",
+  "outputDirectory": "public",
   "framework": null,
-  "functions": {
-    "server.ts": {
-      "includeFiles": "public/**"
+  "rewrites": [
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
     }
-  }
+  ]
 }
