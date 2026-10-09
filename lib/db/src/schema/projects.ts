@@ -21,6 +21,10 @@ export const projectsTable = pgTable("projects", {
   plans: jsonb("plans").notNull().$type<{ title: string; url: string }[]>().default([]),
   sortOrder: integer("sort_order").notNull().default(0),
   published: boolean("published").notNull().default(true),
+  startsOn: text("starts_on").notNull().default(""),
+  endsOn: text("ends_on").notNull().default(""),
+  phase: text("phase").notNull().default(""),
+  createdBy: integer("created_by"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

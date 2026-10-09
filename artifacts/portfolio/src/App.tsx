@@ -11,6 +11,9 @@ import Posts from "@/pages/Posts";
 import PostDetail from "@/pages/PostDetail";
 
 import AdminLogin from "@/pages/admin/AdminLogin";
+import AdminRegister from "@/pages/admin/AdminRegister";
+import AdminStudio from "@/pages/admin/AdminStudio";
+import AdminStudioProject from "@/pages/admin/AdminStudioProject";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import AdminProjects from "@/pages/admin/AdminProjects";
 import AdminProjectForm from "@/pages/admin/AdminProjectForm";
@@ -19,6 +22,7 @@ import AdminPostForm from "@/pages/admin/AdminPostForm";
 import AdminSkills from "@/pages/admin/AdminSkills";
 import AdminSettings from "@/pages/admin/AdminSettings";
 import AdminUploads from "@/pages/admin/AdminUploads";
+import { apiBase } from "@/lib/studio-api";
 
 const queryClient = new QueryClient();
 
@@ -48,8 +52,7 @@ function ThemeApplicator() {
   const { data: settings } = useQuery({
     queryKey: ["settings-theme"],
     queryFn: async () => {
-      const apiBase = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/+$/, "") || "";
-      const res = await fetch(`${apiBase}/api/settings`, { credentials: "include" });
+      const res = await fetch(`${apiBase()}/api/settings`, { credentials: "include" });
       if (!res.ok) throw new Error(`Failed to load settings (${res.status})`);
       return res.json() as Promise<{ primaryColor?: string; accentColor?: string }>;
     },
@@ -88,7 +91,10 @@ function Router() {
       
       {/* Admin Routes */}
       <Route path="/admin/login" component={AdminLogin} />
+      <Route path="/admin/register" component={AdminRegister} />
       <Route path="/admin" component={AdminDashboard} />
+      <Route path="/admin/studio" component={AdminStudio} />
+      <Route path="/admin/studio/:id" component={AdminStudioProject} />
       
       <Route path="/admin/projects" component={AdminProjects} />
       <Route path="/admin/projects/new" component={AdminProjectForm} />

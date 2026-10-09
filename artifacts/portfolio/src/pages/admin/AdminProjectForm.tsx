@@ -42,7 +42,8 @@ export default function AdminProjectForm() {
       plans: [] as { title: string; url: string }[],
       methodologySteps: [],
       galleryImages: [""],
-      sortOrder: 0, published: false
+      sortOrder: 0, published: false,
+      startsOn: "", endsOn: "", phase: ""
     }
   });
 
@@ -64,7 +65,10 @@ export default function AdminProjectForm() {
         plans: p.plans || [],
         methodologySteps: project.methodologySteps || [],
         galleryImages: project.galleryImages.length > 0 ? project.galleryImages : [""],
-        sortOrder: project.sortOrder, published: project.published
+        sortOrder: project.sortOrder, published: project.published,
+        startsOn: (project as { startsOn?: string }).startsOn || "",
+        endsOn: (project as { endsOn?: string }).endsOn || "",
+        phase: (project as { phase?: string }).phase || "",
       });
     }
   }, [project, isEditing, form]);
@@ -157,6 +161,34 @@ export default function AdminProjectForm() {
                     )} />
                     <FormField control={form.control} name="tools" render={({ field }) => (
                       <FormItem><FormLabel>Tools</FormLabel><FormControl><Input className="rounded-none" {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                  </div>
+                </div>
+
+                <div className="space-y-4 p-6 border border-border bg-muted/10">
+                  <h2 className="mono text-sm font-bold uppercase tracking-widest text-primary border-b border-border pb-2">PROGRAMME</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <FormField control={form.control} name="startsOn" render={({ field }) => (
+                      <FormItem><FormLabel>Start</FormLabel><FormControl><Input type="date" className="rounded-none" {...field} value={field.value || ""} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={form.control} name="endsOn" render={({ field }) => (
+                      <FormItem><FormLabel>Target completion</FormLabel><FormControl><Input type="date" className="rounded-none" {...field} value={field.value || ""} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={form.control} name="phase" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Phase</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || ""}>
+                          <FormControl>
+                            <SelectTrigger className="rounded-none"><SelectValue placeholder="Phase" /></SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {["Concept", "Schematic Design", "Design Development", "Construction Documents", "Construction Administration", "Complete"].map((phase) => (
+                              <SelectItem key={phase} value={phase}>{phase}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
                     )} />
                   </div>
                 </div>

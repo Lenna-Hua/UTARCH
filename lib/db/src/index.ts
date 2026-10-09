@@ -10,7 +10,16 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const connectionString = process.env.DATABASE_URL;
+const isLocal =
+  connectionString.includes("127.0.0.1") ||
+  connectionString.includes("localhost");
+
+export const pool = new Pool({
+  connectionString,
+  max: process.env.VERCEL ? 1 : 10,
+  ssl: isLocal ? undefined : { rejectUnauthorized: false },
+});
 export const db = drizzle(pool, { schema });
 
 export * from "./schema";

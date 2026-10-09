@@ -11,6 +11,23 @@ const app: Express = express();
 
 app.set("trust proxy", 1);
 
+// Vercel's catch-all sometimes forwards `/healthz` instead of `/api/healthz`.
+if (process.env.VERCEL) {
+  app.use((req, _res, next) => {
+    const url = req.url || "/";
+    if (url === "/api" || url.startsWith("/api/") || url.startsWith("/api?")) {
+      next();
+      return;
+    }
+    const q = url.indexOf("?");
+    const path = q === -1 ? url : url.slice(0, q);
+    const query = q === -1 ? "" : url.slice(q);
+    const normalized = path.startsWith("/") ? path : `/${path}`;
+    req.url = `/api${normalized}${query}`;
+    next();
+  });
+}
+
 const isProduction = process.env.NODE_ENV === "production";
 const sessionSecret = process.env.SESSION_SECRET?.trim();
 const weakSessionSecrets = new Set([
@@ -24,11 +41,26 @@ if (!sessionSecret || weakSessionSecrets.has(sessionSecret)) {
   );
 }
 
+function withScheme(host: string): string {
+  if (host.startsWith("http://") || host.startsWith("https://")) return host;
+  return `https://${host}`;
+}
+
 // Comma-separated allowlist for split frontend/backend deploys (e.g. Vercel + Render).
-const corsOrigins = (process.env.CORS_ORIGIN || "")
+// On Vercel the platform sets VERCEL_URL, so same-origin previews work without a manual CORS_ORIGIN.
+const configuredOrigins = (process.env.CORS_ORIGIN || "")
   .split(",")
   .map((o) => o.trim())
   .filter(Boolean);
+const vercelOrigins = [
+  process.env.VERCEL_PROJECT_PRODUCTION_URL,
+  process.env.VERCEL_BRANCH_URL,
+  process.env.VERCEL_URL,
+]
+  .map((host) => host?.trim())
+  .filter((host): host is string => Boolean(host))
+  .map(withScheme);
+const corsOrigins = Array.from(new Set([...configuredOrigins, ...vercelOrigins]));
 
 if (isProduction && corsOrigins.length === 0) {
   throw new Error(
@@ -38,6 +70,11 @@ if (isProduction && corsOrigins.length === 0) {
 
 const crossOrigin = corsOrigins.length > 0;
 const PgSession = connectPgSimple(session);
+
+// SameSite=None requires Secure. Allow Secure on http://localhost / 127.0.0.1
+// (browsers treat them as secure contexts) so split local origins still work.
+const cookieSecure = isProduction || crossOrigin;
+const cookieSameSite = crossOrigin ? ("none" as const) : ("lax" as const);
 
 app.use(
   pinoHttp({
@@ -79,21 +116,47 @@ app.use(
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 
+let sessionTableReady: Promise<void> | undefined;
+function ensureSessionTable(): Promise<void> {
+  if (!sessionTableReady) {
+    sessionTableReady = pool
+      .query(
+        `CREATE TABLE IF NOT EXISTS "session" (
+          "sid" varchar NOT NULL COLLATE "default",
+          "sess" json NOT NULL,
+          "expire" timestamp(6) NOT NULL,
+          PRIMARY KEY ("sid")
+        );
+        CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire");`,
+      )
+      .then(() => undefined)
+      .catch((err: unknown) => {
+        sessionTableReady = undefined;
+        throw err;
+      });
+  }
+  return sessionTableReady;
+}
+
+app.use((req, res, next) => {
+  ensureSessionTable().then(() => next(), next);
+});
+
 app.use(
   session({
     store: new PgSession({
       pool,
-      createTableIfMissing: true,
+      createTableIfMissing: false,
       tableName: "session",
     }),
     secret: sessionSecret,
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: isProduction,
+      secure: cookieSecure,
       httpOnly: true,
       // Cross-site cookies require SameSite=None + Secure (Vercel → Render)
-      sameSite: crossOrigin ? "none" : "lax",
+      sameSite: cookieSameSite,
       maxAge: 7 * 24 * 60 * 60 * 1000,
     },
   }),

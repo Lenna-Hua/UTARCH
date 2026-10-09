@@ -8,6 +8,18 @@ const port = rawPort ? Number(rawPort) : 3000;
 
 const basePath = process.env.BASE_PATH ?? "/";
 
+// Dev proxy keeps /api same-origin so session cookies work whether the
+// browser is on localhost or 127.0.0.1 (cross-host breaks SameSite=Lax).
+const apiProxyTarget =
+  process.env.VITE_API_PROXY_TARGET?.replace(/\/+$/, "") || "http://127.0.0.1:8080";
+
+const apiProxy = {
+  "/api": {
+    target: apiProxyTarget,
+    changeOrigin: true,
+  },
+} as const;
+
 export default defineConfig({
   base: basePath,
   plugins: [react(), tailwindcss()],
@@ -32,6 +44,7 @@ export default defineConfig({
     strictPort: true,
     host: "0.0.0.0",
     allowedHosts: true,
+    proxy: { ...apiProxy },
     fs: {
       strict: true,
       allow: [
@@ -45,5 +58,6 @@ export default defineConfig({
     port,
     host: "0.0.0.0",
     allowedHosts: true,
+    proxy: { ...apiProxy },
   },
 });
