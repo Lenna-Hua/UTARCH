@@ -24,6 +24,28 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
   });
 
   useEffect(() => {
+    // #region agent log
+    {
+      const payload = {
+        sessionId: "5420",
+        hypothesisId: "C,E",
+        location: "AdminLayout.tsx:auth-gate",
+        message: "AdminLayout auth gate evaluation",
+        data: {
+          isLoading,
+          authenticated: auth?.authenticated ?? null,
+          pageOrigin: window.location.origin,
+          willRedirect: !isLoading && !auth?.authenticated,
+        },
+        timestamp: Date.now(),
+      };
+      fetch("http://127.0.0.1:7242/ingest/a91bd5e4-91f9-4e64-b963-d5a518b0315e", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "5420" },
+        body: JSON.stringify(payload),
+      }).catch(() => {});
+    }
+    // #endregion
     if (!isLoading && !auth?.authenticated) {
       setLocation("/admin/login");
     }

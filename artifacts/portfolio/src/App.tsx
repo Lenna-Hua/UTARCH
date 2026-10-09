@@ -22,6 +22,7 @@ import AdminPostForm from "@/pages/admin/AdminPostForm";
 import AdminSkills from "@/pages/admin/AdminSkills";
 import AdminSettings from "@/pages/admin/AdminSettings";
 import AdminUploads from "@/pages/admin/AdminUploads";
+import { apiBase } from "@/lib/studio-api";
 
 const queryClient = new QueryClient();
 
@@ -51,8 +52,7 @@ function ThemeApplicator() {
   const { data: settings } = useQuery({
     queryKey: ["settings-theme"],
     queryFn: async () => {
-      const apiBase = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/+$/, "") || "";
-      const res = await fetch(`${apiBase}/api/settings`, { credentials: "include" });
+      const res = await fetch(`${apiBase()}/api/settings`, { credentials: "include" });
       if (!res.ok) throw new Error(`Failed to load settings (${res.status})`);
       return res.json() as Promise<{ primaryColor?: string; accentColor?: string }>;
     },

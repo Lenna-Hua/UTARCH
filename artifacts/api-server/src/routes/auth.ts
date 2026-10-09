@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { db, staffUsersTable } from "@workspace/db";
 import { loginRateLimiter } from "../middlewares/loginRateLimit";
 import { sessionUserId, setStaffSession } from "../middlewares/requireAdmin";
+import { agentLog } from "../lib/debug-agent-log";
 
 const router: IRouter = Router();
 
@@ -85,6 +86,27 @@ router.post("/auth/login", loginRateLimiter, async (req: Request, res: Response)
       return;
     }
     setStaffSession(req, user.id);
+    // #region agent log
+    {
+      const sess = req.session as unknown as { isAdmin?: boolean; userId?: number };
+      agentLog("A,C,E", "auth.ts:login-success", "Staff login succeeded; inspecting session + cookie headers", {
+        origin: req.headers.origin ?? null,
+        hasCookieHeader: Boolean(req.headers.cookie),
+        cookieHeaderLen: req.headers.cookie?.length ?? 0,
+        sessionID: req.sessionID ?? null,
+        isAdmin: sess.isAdmin === true,
+        userId: sess.userId ?? null,
+        runId: "post-fix",
+      });
+      res.once("finish", () => {
+        agentLog("A,B,D", "auth.ts:login-set-cookie", "Set-Cookie after login response", {
+          statusCode: res.statusCode,
+          setCookie: res.getHeader("set-cookie") ?? null,
+          runId: "post-fix",
+        });
+      });
+    }
+    // #endregion
     res.json({ authenticated: true, user: publicUser(user) });
   } catch (err) {
     req.log.error({ err }, "Staff login error");
@@ -100,6 +122,22 @@ router.post("/auth/logout", (req: Request, res: Response) => {
 
 router.get("/auth/me", async (req: Request, res: Response) => {
   const userId = sessionUserId(req);
+  // #region agent log
+  {
+    const sess = req.session as unknown as { isAdmin?: boolean; userId?: number };
+    agentLog("A,C,D", "auth.ts:auth-me", "GET /api/auth/me session probe", {
+      origin: req.headers.origin ?? null,
+      hasCookieHeader: Boolean(req.headers.cookie),
+      cookieNames: (req.headers.cookie || "")
+        .split(";")
+        .map((c) => c.trim().split("=")[0])
+        .filter(Boolean),
+      sessionID: req.sessionID ?? null,
+      userId,
+      isAdmin: sess.isAdmin === true,
+    });
+  }
+  // #endregion
   if (userId === null) {
     res.json({ authenticated: false, user: null });
     return;

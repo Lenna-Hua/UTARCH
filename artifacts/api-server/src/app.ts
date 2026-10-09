@@ -6,6 +6,7 @@ import connectPgSimple from "connect-pg-simple";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { pool } from "@workspace/db";
+import { agentLog } from "./lib/debug-agent-log";
 
 const app: Express = express();
 
@@ -38,6 +39,23 @@ if (isProduction && corsOrigins.length === 0) {
 
 const crossOrigin = corsOrigins.length > 0;
 const PgSession = connectPgSimple(session);
+
+// SameSite=None requires Secure. Allow Secure on http://localhost / 127.0.0.1
+// (browsers treat them as secure contexts) so split local origins still work.
+const cookieSecure = isProduction || crossOrigin;
+const cookieSameSite = crossOrigin ? ("none" as const) : ("lax" as const);
+
+// #region agent log
+agentLog("A,B", "app.ts:session-cookie-config", "Session cookie + CORS config at boot", {
+  secure: cookieSecure,
+  sameSite: cookieSameSite,
+  crossOrigin,
+  corsOrigins,
+  isProduction,
+  nodeEnv: process.env.NODE_ENV ?? null,
+  runId: "post-fix",
+});
+// #endregion
 
 app.use(
   pinoHttp({
@@ -90,10 +108,10 @@ app.use(
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: isProduction,
+      secure: cookieSecure,
       httpOnly: true,
       // Cross-site cookies require SameSite=None + Secure (Vercel → Render)
-      sameSite: crossOrigin ? "none" : "lax",
+      sameSite: cookieSameSite,
       maxAge: 7 * 24 * 60 * 60 * 1000,
     },
   }),

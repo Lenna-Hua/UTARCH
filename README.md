@@ -19,7 +19,7 @@ pnpm --filter @workspace/api-server dev
 pnpm --filter @workspace/portfolio dev
 ```
 
-Optional frontend env (`artifacts/portfolio/.env`): `VITE_API_URL=http://localhost:8080`
+Local Vite proxies `/api` to the API (default `http://127.0.0.1:8080`). Leave `VITE_API_URL` unset locally so session cookies stay same-origin. Set `VITE_API_URL` only for split deploys (e.g. Vercel → Render).
 ## Admin
 
 - URL: `/admin/login`

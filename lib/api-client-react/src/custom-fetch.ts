@@ -362,6 +362,32 @@ export async function customFetch<T = unknown>(
 
   const response = await fetch(input, { ...init, method, headers, credentials: "include" });
 
+  // #region agent log
+  {
+    const resolved = resolveUrl(input);
+    if (resolved.includes("/api/admin/me") || resolved.includes("/api/auth/")) {
+      const payload = {
+        sessionId: "5420",
+        hypothesisId: "A,C,D",
+        location: "custom-fetch.ts:response",
+        message: "customFetch auth-related response",
+        data: {
+          url: resolved,
+          status: response.status,
+          pageOrigin: typeof window !== "undefined" ? window.location.origin : null,
+          baseUrl: _baseUrl,
+        },
+        timestamp: Date.now(),
+      };
+      fetch("http://127.0.0.1:7242/ingest/a91bd5e4-91f9-4e64-b963-d5a518b0315e", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "5420" },
+        body: JSON.stringify(payload),
+      }).catch(() => {});
+    }
+  }
+  // #endregion
+
   if (!response.ok) {
     const errorData = await parseErrorBody(response, method);
     throw new ApiError(response, errorData, requestInfo);

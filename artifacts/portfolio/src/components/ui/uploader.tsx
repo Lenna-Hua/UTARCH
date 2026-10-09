@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Upload, Copy, Check, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { apiBase } from "@/lib/studio-api";
 
 export function Uploader({ onUploadComplete }: { onUploadComplete?: (url: string) => void }) {
   const [file, setFile] = useState<File | null>(null);
@@ -20,8 +21,7 @@ export function Uploader({ onUploadComplete }: { onUploadComplete?: (url: string
       const formData = new FormData();
       formData.append("file", file);
       
-      const apiBase = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/+$/, "") || "";
-      const res = await fetch(`${apiBase}/api/uploads`, {
+      const res = await fetch(`${apiBase()}/api/uploads`, {
         method: "POST",
         body: formData,
         credentials: "include",

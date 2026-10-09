@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { db, siteSettingsTable } from "@workspace/db";
 import { loginRateLimiter } from "../middlewares/loginRateLimit";
+import { agentLog } from "../lib/debug-agent-log";
 
 const router: IRouter = Router();
 
@@ -60,6 +61,23 @@ router.post("/admin/logout", (req: Request, res: Response) => {
 
 router.get("/admin/me", (req: Request, res: Response) => {
   const isAdmin = (req.session as unknown as Record<string, unknown>)["isAdmin"] === true;
+  // #region agent log
+  {
+    const sess = req.session as unknown as Record<string, unknown>;
+    agentLog("A,C,D,E", "admin.ts:admin-me", "GET /api/admin/me session probe (AdminLayout gate)", {
+      origin: req.headers.origin ?? null,
+      hasCookieHeader: Boolean(req.headers.cookie),
+      cookieNames: (req.headers.cookie || "")
+        .split(";")
+        .map((c) => c.trim().split("=")[0])
+        .filter(Boolean),
+      sessionID: req.sessionID ?? null,
+      isAdmin,
+      userId: typeof sess["userId"] === "number" ? sess["userId"] : null,
+      runId: "post-fix",
+    });
+  }
+  // #endregion
   res.json({ authenticated: isAdmin });
 });
 

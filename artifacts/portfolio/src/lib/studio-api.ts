@@ -1,5 +1,24 @@
-const apiBase = () =>
-  ((import.meta.env.VITE_API_URL as string | undefined) ?? "").replace(/\/+$/, "");
+/**
+ * Resolve API origin for fetch.
+ * In local Vite, prefer same-origin (empty base + /api proxy) when VITE_API_URL
+ * points at a different host than the page (e.g. localhost vs 127.0.0.1) —
+ * that mismatch makes SameSite=Lax session cookies invisible to later requests.
+ */
+export function apiBase(): string {
+  const configured = ((import.meta.env.VITE_API_URL as string | undefined) ?? "").replace(
+    /\/+$/,
+    "",
+  );
+  if (!configured) return "";
+  if (typeof window === "undefined" || !import.meta.env.DEV) return configured;
+  try {
+    const apiHost = new URL(configured, window.location.origin).hostname;
+    if (apiHost !== window.location.hostname) return "";
+  } catch {
+    return configured;
+  }
+  return configured;
+}
 
 export class StudioError extends Error {
   status: number;
@@ -63,11 +82,60 @@ export async function studioJson<T>(path: string, init?: RequestInit): Promise<T
   if (init?.body && !(init.body instanceof FormData) && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
-  const res = await fetch(`${apiBase()}${path}`, {
+  const url = `${apiBase()}${path}`;
+  // #region agent log
+  {
+    const payload = {
+      sessionId: "5420",
+      hypothesisId: "A,D",
+      location: "studio-api.ts:studioJson-request",
+      message: "studioJson request",
+      data: {
+        path,
+        method: init?.method ?? "GET",
+        apiBase: apiBase(),
+        viteApiUrl: (import.meta.env.VITE_API_URL as string | undefined) ?? "",
+        pageOrigin: typeof window !== "undefined" ? window.location.origin : null,
+        credentials: "include",
+        runId: "post-fix",
+      },
+      timestamp: Date.now(),
+    };
+    fetch("http://127.0.0.1:7242/ingest/a91bd5e4-91f9-4e64-b963-d5a518b0315e", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "5420" },
+      body: JSON.stringify(payload),
+    }).catch(() => {});
+  }
+  // #endregion
+  const res = await fetch(url, {
     credentials: "include",
     ...init,
     headers,
   });
+  // #region agent log
+  {
+    const payload = {
+      sessionId: "5420",
+      hypothesisId: "A,C,D",
+      location: "studio-api.ts:studioJson-response",
+      message: "studioJson response",
+      data: {
+        path,
+        status: res.status,
+        url: res.url,
+        // Set-Cookie is forbidden to JS; log whether browser exposed any cookie-related header names
+        headerKeys: Array.from(res.headers.keys()),
+      },
+      timestamp: Date.now(),
+    };
+    fetch("http://127.0.0.1:7242/ingest/a91bd5e4-91f9-4e64-b963-d5a518b0315e", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "5420" },
+      body: JSON.stringify(payload),
+    }).catch(() => {});
+  }
+  // #endregion
   return parse<T>(res);
 }
 

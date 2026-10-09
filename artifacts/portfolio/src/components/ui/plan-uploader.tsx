@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from "react";
 import { Upload, FileText, Image, Loader2, X, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { apiBase } from "@/lib/studio-api";
 import { Button } from "./button";
 
 interface PlanUploaderProps {
@@ -20,8 +21,7 @@ export function PlanUploader({ onUpload }: PlanUploaderProps) {
     try {
       const formData = new FormData();
       formData.append("file", file);
-      const apiBase = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/+$/, "") || "";
-      const res = await fetch(`${apiBase}/api/uploads`, {
+      const res = await fetch(`${apiBase()}/api/uploads`, {
         method: "POST",
         body: formData,
         credentials: "include",
