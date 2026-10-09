@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
-import { apiBase, studioJson } from "@/lib/studio-api";
+import { studioJson } from "@/lib/studio-api";
 
 export default function AdminLogin() {
   const [email, setEmail] = useState("");
@@ -24,31 +24,6 @@ export default function AdminLogin() {
         method: "POST",
         body: JSON.stringify({ email, password }),
       });
-      // #region agent log
-      {
-        const payload = {
-          sessionId: "5420",
-          hypothesisId: "C,D",
-          location: "AdminLogin.tsx:after-login",
-          message: "Login API returned; about to reset admin me + redirect",
-          data: {
-            authenticated: data.authenticated,
-            pageOrigin: window.location.origin,
-            apiBaseConfigured: (import.meta.env.VITE_API_URL as string | undefined) ?? "",
-            apiBaseResolved: apiBase(),
-            runId: "post-fix",
-            nextPath: "/admin",
-            adminMeQueryKey: getAdminMeQueryKey(),
-          },
-          timestamp: Date.now(),
-        };
-        fetch("http://127.0.0.1:7242/ingest/a91bd5e4-91f9-4e64-b963-d5a518b0315e", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "5420" },
-          body: JSON.stringify(payload),
-        }).catch(() => {});
-      }
-      // #endregion
       if (!data.authenticated) {
         toast({ title: "Invalid email or password", variant: "destructive" });
         return;

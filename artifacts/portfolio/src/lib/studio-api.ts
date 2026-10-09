@@ -82,60 +82,11 @@ export async function studioJson<T>(path: string, init?: RequestInit): Promise<T
   if (init?.body && !(init.body instanceof FormData) && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
-  const url = `${apiBase()}${path}`;
-  // #region agent log
-  {
-    const payload = {
-      sessionId: "5420",
-      hypothesisId: "A,D",
-      location: "studio-api.ts:studioJson-request",
-      message: "studioJson request",
-      data: {
-        path,
-        method: init?.method ?? "GET",
-        apiBase: apiBase(),
-        viteApiUrl: (import.meta.env.VITE_API_URL as string | undefined) ?? "",
-        pageOrigin: typeof window !== "undefined" ? window.location.origin : null,
-        credentials: "include",
-        runId: "post-fix",
-      },
-      timestamp: Date.now(),
-    };
-    fetch("http://127.0.0.1:7242/ingest/a91bd5e4-91f9-4e64-b963-d5a518b0315e", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "5420" },
-      body: JSON.stringify(payload),
-    }).catch(() => {});
-  }
-  // #endregion
-  const res = await fetch(url, {
+  const res = await fetch(`${apiBase()}${path}`, {
     credentials: "include",
     ...init,
     headers,
   });
-  // #region agent log
-  {
-    const payload = {
-      sessionId: "5420",
-      hypothesisId: "A,C,D",
-      location: "studio-api.ts:studioJson-response",
-      message: "studioJson response",
-      data: {
-        path,
-        status: res.status,
-        url: res.url,
-        // Set-Cookie is forbidden to JS; log whether browser exposed any cookie-related header names
-        headerKeys: Array.from(res.headers.keys()),
-      },
-      timestamp: Date.now(),
-    };
-    fetch("http://127.0.0.1:7242/ingest/a91bd5e4-91f9-4e64-b963-d5a518b0315e", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "5420" },
-      body: JSON.stringify(payload),
-    }).catch(() => {});
-  }
-  // #endregion
   return parse<T>(res);
 }
 
