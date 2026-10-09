@@ -88371,6 +88371,8 @@ if (isProduction2 && corsOrigins.length === 0) {
 }
 var crossOrigin = corsOrigins.length > 0;
 var PgSession2 = (0, import_connect_pg_simple.default)(import_express_session.default);
+var cookieSecure = isProduction2 || crossOrigin;
+var cookieSameSite = crossOrigin ? "none" : "lax";
 app.use(
   pinoHttp({
     logger,
@@ -88436,10 +88438,10 @@ app.use(
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: isProduction2,
+      secure: cookieSecure,
       httpOnly: true,
       // Cross-site cookies require SameSite=None + Secure (Vercel → Render)
-      sameSite: crossOrigin ? "none" : "lax",
+      sameSite: cookieSameSite,
       maxAge: 7 * 24 * 60 * 60 * 1e3
     }
   })
