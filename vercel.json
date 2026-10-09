@@ -1,12 +1,10 @@
 {
   "installCommand": "pnpm install",
-  "buildCommand": "pnpm --filter @workspace/portfolio build",
-  "outputDirectory": "artifacts/portfolio/dist/public",
-  "framework": "vite",
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
+  "buildCommand": "pnpm --filter @workspace/portfolio build && rm -rf public && mkdir -p public && cp -a artifacts/portfolio/dist/public/. public/",
+  "framework": null,
+  "functions": {
+    "server.ts": {
+      "includeFiles": "public/**"
     }
-  ]
+  }
 }
