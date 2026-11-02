@@ -18,11 +18,4 @@ pnpm --filter @workspace/portfolio dev
 ```
 
 Optional frontend env (`artifacts/portfolio/.env`): `VITE_API_URL=http://localhost:8080`
-## Admin
-
-- URL: `/admin/login`
-- Bootstrap with `ADMIN_PASSWORD` env (only used when no password hash exists yet)
-- Change password later in **Settings** (min 12 characters)
-
-## Deploy
 
