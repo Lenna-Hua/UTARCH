@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useGetSettings, useListProjects, useListSkills } from "@workspace/api-client-react";
-import { Navbar } from "@/components/layout/Navbar";
-import { Footer } from "@/components/layout/Footer";
+import { PublicLayout } from "@/components/layout/PublicLayout";
 import { Link } from "wouter";
 import { MoveRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -12,13 +11,13 @@ const fadeUp = {
   visible: (i = 0) => ({
     opacity: 1,
     y: 0,
-    transition: { duration: 0.55, delay: i * 0.07, ease: [0.22, 1, 0.36, 1] }
+    transition: { duration: 0.55, delay: i * 0.07, ease: [0.22, 1, 0.36, 1] as const }
   })
 };
 
-function effectiveCategory(p: { category?: string; role: string }): string {
+function effectiveCategory(p: { category?: string; role?: string }): string {
   const cat = (p.category || "").trim();
-  return cat !== "" ? cat.toUpperCase() : p.role.toUpperCase();
+  return cat !== "" ? cat.toUpperCase() : (p.role || "PROJECT").toUpperCase();
 }
 
 export default function Home() {
@@ -37,12 +36,9 @@ export default function Home() {
     : projects.filter((p) => effectiveCategory(p) === activeFilter);
 
   return (
-    <div className="min-h-[100dvh] flex flex-col">
-      <Navbar />
-      
-      <main className="flex-1 flex flex-col">
-        {/* HERO SECTION */}
-        <section className="border-b border-border grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-border">
+    <PublicLayout>
+      {/* HERO SECTION */}
+      <section className="border-b border-border grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-border">
           <div className="p-8 lg:p-16 flex flex-col justify-center">
             <motion.h1
               className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold uppercase tracking-tighter leading-[0.92] text-primary hyphens-none"
@@ -53,7 +49,7 @@ export default function Home() {
               {settings?.title || "ARCHITECTURAL TECHNOLOGIST"}
             </motion.h1>
             <motion.p
-              className="mt-6 text-xl text-foreground font-medium max-w-md"
+              className="mt-6 text-xl text-foreground font-medium max-w-md whitespace-pre-wrap"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.55, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
@@ -105,7 +101,7 @@ export default function Home() {
           >
             <h2 className="mono text-sm text-muted-foreground uppercase mb-6 tracking-widest">{settings?.aboutHeading || "ABOUT_ME"}</h2>
             <div className="prose prose-zinc prose-p:text-foreground prose-p:leading-relaxed max-w-none">
-              <p>{settings?.aboutBody || "I specialize in transforming architectural concepts into precise, actionable technical drawings."}</p>
+              <p className="whitespace-pre-wrap">{settings?.aboutBody || "I specialize in transforming architectural concepts into precise, actionable technical drawings."}</p>
             </div>
           </motion.div>
           <div className="grid grid-cols-2 divide-x divide-y divide-border -mt-[1px] -ml-[1px]">
@@ -161,7 +157,7 @@ export default function Home() {
             ))}
           </motion.div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-border border-b border-border flex-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 border-b border-border flex-1">
             <AnimatePresence mode="popLayout">
             {filteredProjects.map((project, i) => (
               <motion.div
@@ -171,11 +167,12 @@ export default function Home() {
                 whileInView="visible"
                 custom={i * 0.5}
                 viewport={{ once: true, margin: "-40px" }}
+                className="border-b sm:border-b-0 border-r border-border flex flex-col"
               >
-                <Link href={`/projects/${project.id}`} className="group block flex flex-col h-full border-b md:border-b-0 border-border md:border-transparent">
-                  <div className="aspect-square relative overflow-hidden bg-muted border-b border-border">
+                <Link href={`/projects/${project.id}`} className="group block flex flex-col h-full">
+                  <div className="aspect-[4/3] sm:aspect-square relative overflow-hidden bg-muted border-b border-border">
                     {project.coverImage ? (
-                      <img src={project.coverImage} alt={project.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 grayscale group-hover:grayscale-0" />
+                      <img src={project.coverImage} alt={project.title} className="w-full h-full object-cover object-top transition-transform duration-500 group-hover:scale-105 grayscale group-hover:grayscale-0" />
                     ) : (
                       <div className="absolute inset-0 flex items-center justify-center text-muted-foreground/30 mono text-xs">NO_IMG</div>
                     )}
@@ -198,6 +195,11 @@ export default function Home() {
               </motion.div>
             ))}
             </AnimatePresence>
+            {filteredProjects.length === 0 && (
+              <div className="col-span-full p-16 text-center mono text-xs text-muted-foreground uppercase tracking-widest">
+                NO_PROJECTS_RECORDED_IN_THIS_CATEGORY
+              </div>
+            )}
           </div>
         </section>
         {/* CONTACT / CTA SECTION */}
@@ -252,9 +254,6 @@ export default function Home() {
             )}
           </div>
         </motion.section>
-      </main>
-
-      <Footer />
-    </div>
+    </PublicLayout>
   );
 }

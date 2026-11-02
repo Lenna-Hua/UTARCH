@@ -42,13 +42,13 @@ export interface Project {
 }
 
 export interface CreateProjectBody {
-  title: string;
-  client: string;
-  subtitle: string;
+  title?: string;
+  client?: string;
+  subtitle?: string;
   category?: string;
-  role: string;
-  focus: string;
-  tools: string;
+  role?: string;
+  focus?: string;
+  tools?: string;
   coverImage?: string | null;
   heroImage?: string | null;
   description?: string | null;

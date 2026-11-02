@@ -12,7 +12,7 @@ export function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 bg-background border-b border-border w-full">
-      <div className="flex h-14 items-center px-4 max-w-screen-2xl mx-auto">
+      <div className="flex h-14 items-center px-6 lg:px-8 w-full">
         <Link href="/" className="font-bold tracking-tight text-primary uppercase text-lg shrink-0 hover:opacity-70 transition-opacity">
           {settings?.ownerName || "UYEN TON"}
         </Link>

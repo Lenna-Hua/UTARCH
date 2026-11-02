@@ -80,14 +80,14 @@ function pickProjectFields(
   startsOn: string;
   endsOn: string;
   phase: string;
-} | null;
+};
 function pickProjectFields(
   body: ProjectBody,
   mode: "update",
 ): Partial<typeof projectsTable.$inferInsert> | null;
 function pickProjectFields(body: ProjectBody, mode: "create" | "update") {
   const data: Partial<typeof projectsTable.$inferInsert> = {};
-  if (body.title !== undefined) data.title = body.title;
+  if (body.title !== undefined) data.title = body.title.trim() || "Untitled Project";
   if (body.client !== undefined) data.client = body.client;
   if (body.subtitle !== undefined) data.subtitle = body.subtitle;
   if (body.category !== undefined) data.category = body.category;
@@ -109,17 +109,14 @@ function pickProjectFields(body: ProjectBody, mode: "create" | "update") {
   if (body.phase !== undefined) data.phase = body.phase;
 
   if (mode === "create") {
-    if (!body.title || !body.client || !body.subtitle || !body.role || !body.focus || !body.tools) {
-      return null;
-    }
     return {
-      title: body.title,
-      client: body.client,
-      subtitle: body.subtitle,
+      title: (body.title && body.title.trim()) || "Untitled Project",
+      client: body.client ?? "",
+      subtitle: body.subtitle ?? "",
       category: body.category ?? "",
-      role: body.role,
-      focus: body.focus,
-      tools: body.tools,
+      role: body.role ?? "",
+      focus: body.focus ?? "",
+      tools: body.tools ?? "",
       coverImage: body.coverImage ?? null,
       heroImage: body.heroImage ?? null,
       description: body.description ?? null,
@@ -129,7 +126,7 @@ function pickProjectFields(body: ProjectBody, mode: "create" | "update") {
       galleryImages: body.galleryImages ?? [],
       plans: body.plans ?? [],
       sortOrder: body.sortOrder ?? 0,
-      published: body.published ?? false,
+      published: body.published ?? true,
       startsOn: body.startsOn ?? "",
       endsOn: body.endsOn ?? "",
       phase: body.phase ?? "",
@@ -189,10 +186,6 @@ router.get("/projects/:id", async (req: Request, res: Response) => {
 
 router.post("/projects", requireAdmin, async (req: Request, res: Response) => {
   const values = pickProjectFields(req.body as ProjectBody, "create");
-  if (!values) {
-    res.status(400).json({ error: "Missing required fields" });
-    return;
-  }
   try {
     const inserted = await db
       .insert(projectsTable)

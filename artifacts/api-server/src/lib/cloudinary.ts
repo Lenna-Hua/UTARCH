@@ -114,3 +114,128 @@ export function uploadBuffer(
     Readable.from(buffer).pipe(stream);
   });
 }
+
+export type CloudinaryImageItem = {
+  publicId: string;
+  url: string;
+  secureUrl: string;
+  format: string;
+  width: number;
+  height: number;
+  bytes: number;
+  createdAt: string;
+  filename: string;
+};
+
+export type ListCloudinaryImagesResult = {
+  resources: CloudinaryImageItem[];
+  nextCursor?: string;
+  totalCount?: number;
+};
+
+export async function listCloudinaryImages(options?: {
+  maxResults?: number;
+  nextCursor?: string;
+  folder?: string;
+  search?: string;
+}): Promise<ListCloudinaryImagesResult> {
+  if (!configureFromEnv()) {
+    throw new Error("Cloudinary is not configured");
+  }
+
+  const maxResults = Math.min(Math.max(options?.maxResults || 40, 1), 100);
+  const rawFolder = options?.folder?.trim();
+  const folder =
+    rawFolder === "all"
+      ? ""
+      : rawFolder !== undefined && rawFolder !== ""
+        ? rawFolder
+        : (process.env.CLOUDINARY_FOLDER?.trim() || "utarch");
+
+  const search = options?.search?.trim();
+
+  if (search) {
+    const sanitized = search.replace(/[^a-zA-Z0-9_\-\*\.]/g, "");
+    let expression = "resource_type:image";
+    if (folder) {
+      expression += ` AND folder:${folder}*`;
+    }
+    if (sanitized) {
+      expression += ` AND (${sanitized}* OR filename:${sanitized}* OR public_id:${sanitized}*)`;
+    }
+
+    const searchBuilder = cloudinary.search
+      .expression(expression)
+      .sort_by("created_at", "desc")
+      .max_results(maxResults);
+
+    if (options?.nextCursor) {
+      searchBuilder.next_cursor(options.nextCursor);
+    }
+
+    const res = await searchBuilder.execute();
+    const resources: CloudinaryImageItem[] = (res.resources || []).map((r: any) => ({
+      publicId: r.public_id,
+      url: r.url,
+      secureUrl: r.secure_url,
+      format: r.format || "",
+      width: r.width || 0,
+      height: r.height || 0,
+      bytes: r.bytes || 0,
+      createdAt: r.created_at || new Date().toISOString(),
+      filename: r.display_name || r.filename || r.public_id.split("/").pop() || r.public_id,
+    }));
+
+    return {
+      resources,
+      nextCursor: res.next_cursor,
+      totalCount: res.total_count,
+    };
+  }
+
+  const queryOpts: Record<string, any> = {
+    type: "upload",
+    resource_type: "image",
+    max_results: maxResults,
+    direction: "desc",
+  };
+
+  if (folder) {
+    queryOpts.prefix = folder;
+  }
+  if (options?.nextCursor) {
+    queryOpts.next_cursor = options.nextCursor;
+  }
+
+  const res = await cloudinary.api.resources(queryOpts);
+  const resources: CloudinaryImageItem[] = (res.resources || []).map((r: any) => ({
+    publicId: r.public_id,
+    url: r.url,
+    secureUrl: r.secure_url,
+    format: r.format || "",
+    width: r.width || 0,
+    height: r.height || 0,
+    bytes: r.bytes || 0,
+    createdAt: r.created_at || new Date().toISOString(),
+    filename: r.display_name || r.public_id.split("/").pop() || r.public_id,
+  }));
+
+  return {
+    resources,
+    nextCursor: res.next_cursor,
+    totalCount: res.total_count,
+  };
+}
+
+export async function deleteCloudinaryImage(
+  publicId: string,
+): Promise<{ result: string }> {
+  if (!configureFromEnv()) {
+    throw new Error("Cloudinary is not configured");
+  }
+  const res = await cloudinary.uploader.destroy(publicId, {
+    resource_type: "image",
+    invalidate: true,
+  });
+  return res;
+}

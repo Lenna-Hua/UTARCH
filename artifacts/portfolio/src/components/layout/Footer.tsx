@@ -41,7 +41,7 @@ export function Footer() {
           </a>
         </div>
       </div>
-      <div className="border-t border-border p-4 flex items-center justify-between">
+      <div className="border-t border-border p-4 px-6 lg:px-8 flex items-center justify-between">
         <p className="mono text-xs text-muted-foreground">
           &copy; {new Date().getFullYear()} {settings?.ownerName || "Uyen Ton"}. All rights reserved.
         </p>

@@ -1,6 +1,5 @@
 import { useGetPost, getGetPostQueryKey } from "@workspace/api-client-react";
-import { Navbar } from "@/components/layout/Navbar";
-import { Footer } from "@/components/layout/Footer";
+import { PublicLayout } from "@/components/layout/PublicLayout";
 import { Link, useParams } from "wouter";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { format } from "date-fns";
@@ -15,36 +14,30 @@ export default function PostDetail() {
 
   if (isLoading) {
     return (
-      <div className="min-h-[100dvh] flex flex-col">
-        <Navbar />
-        <main className="flex-1 flex items-center justify-center">
+      <PublicLayout>
+        <div className="flex-1 flex items-center justify-center p-16">
           <Loader2 className="animate-spin text-primary w-8 h-8" />
-        </main>
-        <Footer />
-      </div>
+        </div>
+      </PublicLayout>
     );
   }
 
   if (!post) {
     return (
-      <div className="min-h-[100dvh] flex flex-col">
-        <Navbar />
-        <main className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+      <PublicLayout>
+        <div className="flex-1 flex flex-col items-center justify-center p-16 text-center">
           <h1 className="text-2xl font-bold mb-4">Post Not Found</h1>
           <Link href="/posts" className="text-accent hover:underline flex items-center gap-2">
             <ArrowLeft className="w-4 h-4" /> Back to Notes
           </Link>
-        </main>
-        <Footer />
-      </div>
+        </div>
+      </PublicLayout>
     );
   }
 
   return (
-    <div className="min-h-[100dvh] flex flex-col">
-      <Navbar />
-      
-      <main className="flex-1 flex flex-col max-w-screen-md mx-auto w-full border-x border-border bg-background">
+    <PublicLayout>
+      <div className="flex-1 flex flex-col max-w-screen-md mx-auto w-full border-x border-border bg-background">
         <div className="border-b border-border">
           <Link href="/posts" className="inline-flex items-center gap-2 px-6 py-4 text-sm font-bold text-primary hover:text-accent transition-colors mono uppercase tracking-widest">
             <ArrowLeft className="w-4 h-4" />
@@ -67,19 +60,17 @@ export default function PostDetail() {
               {post.title}
             </h1>
             {post.excerpt && (
-              <p className="mt-6 text-xl text-muted-foreground leading-relaxed">
+              <p className="mt-6 text-xl text-muted-foreground leading-relaxed whitespace-pre-wrap">
                 {post.excerpt}
               </p>
             )}
           </header>
 
-          <div className="prose prose-zinc prose-lg max-w-none prose-headings:text-primary prose-p:text-foreground prose-p:leading-relaxed whitespace-pre-wrap">
+          <div className="prose prose-zinc prose-lg max-w-none prose-headings:text-primary prose-p:text-foreground prose-p:leading-relaxed whitespace-pre-wrap break-words">
             {post.content}
           </div>
         </article>
-      </main>
-
-      <Footer />
-    </div>
+      </div>
+    </PublicLayout>
   );
 }

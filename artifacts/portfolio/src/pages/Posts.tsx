@@ -1,6 +1,5 @@
 import { useListPosts } from "@workspace/api-client-react";
-import { Navbar } from "@/components/layout/Navbar";
-import { Footer } from "@/components/layout/Footer";
+import { PublicLayout } from "@/components/layout/PublicLayout";
 import { Link } from "wouter";
 import { ArrowRight } from "lucide-react";
 import { format } from "date-fns";
@@ -11,7 +10,7 @@ const fadeUp = {
   visible: (i = 0) => ({
     opacity: 1,
     y: 0,
-    transition: { duration: 0.5, delay: i * 0.08, ease: [0.22, 1, 0.36, 1] }
+    transition: { duration: 0.5, delay: i * 0.08, ease: [0.22, 1, 0.36, 1] as const }
   })
 };
 
@@ -19,10 +18,7 @@ export default function Posts() {
   const { data: posts = [], isLoading } = useListPosts();
 
   return (
-    <div className="min-h-[100dvh] flex flex-col">
-      <Navbar />
-
-      <main className="flex-1 flex flex-col">
+    <PublicLayout>
         {/* HEADER */}
         <motion.div
           className="border-b border-border p-8 md:p-16"
@@ -103,7 +99,7 @@ export default function Posts() {
                     <h2 className="text-xl font-bold text-primary mb-3 leading-tight group-hover:text-accent transition-colors">
                       {post.title}
                     </h2>
-                    <p className="text-muted-foreground text-sm line-clamp-3 mb-6 leading-relaxed">
+                    <p className="text-muted-foreground text-sm line-clamp-3 mb-6 leading-relaxed whitespace-pre-line">
                       {post.excerpt}
                     </p>
                     <div className="mt-auto flex items-center text-primary group-hover:text-accent font-medium text-sm mono uppercase tracking-wider transition-colors">
@@ -116,9 +112,6 @@ export default function Posts() {
             ))}
           </div>
         )}
-      </main>
-
-      <Footer />
-    </div>
+    </PublicLayout>
   );
 }

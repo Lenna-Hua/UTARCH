@@ -517,13 +517,6 @@ components:
           type: integer
         published:
           type: boolean
-      required:
-        - title
-        - client
-        - subtitle
-        - role
-        - focus
-        - tools
 
     UpdateProjectBody:
       type: object

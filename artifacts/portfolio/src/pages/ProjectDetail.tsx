@@ -1,6 +1,5 @@
 import { useGetProject, getGetProjectQueryKey } from "@workspace/api-client-react";
-import { Navbar } from "@/components/layout/Navbar";
-import { Footer } from "@/components/layout/Footer";
+import { PublicLayout } from "@/components/layout/PublicLayout";
 import { Link, useParams } from "wouter";
 import { ArrowLeft, Download, FileText, ZoomIn, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -11,7 +10,7 @@ const fadeUp = {
   visible: (i = 0) => ({
     opacity: 1,
     y: 0,
-    transition: { duration: 0.5, delay: i * 0.08, ease: [0.22, 1, 0.36, 1] }
+    transition: { duration: 0.5, delay: i * 0.08, ease: [0.22, 1, 0.36, 1] as const }
   })
 };
 
@@ -150,36 +149,45 @@ export default function ProjectDetail() {
 
   if (isLoading) {
     return (
-      <div className="min-h-[100dvh] flex flex-col">
-        <Navbar />
-        <main className="flex-1 flex items-center justify-center">
+      <PublicLayout>
+        <div className="flex-1 flex items-center justify-center p-16">
           <Loader2 className="animate-spin text-primary w-8 h-8" />
-        </main>
-        <Footer />
-      </div>
+        </div>
+      </PublicLayout>
     );
   }
 
   if (!project) {
     return (
-      <div className="min-h-[100dvh] flex flex-col">
-        <Navbar />
-        <main className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+      <PublicLayout>
+        <div className="flex-1 flex flex-col items-center justify-center p-16 text-center">
           <h1 className="text-2xl font-bold mb-4">Project Not Found</h1>
           <Link href="/" className="text-primary hover:underline flex items-center gap-2">
             <ArrowLeft className="w-4 h-4" /> Back to Archive
           </Link>
-        </main>
-        <Footer />
-      </div>
+        </div>
+      </PublicLayout>
     );
   }
 
-  return (
-    <div className="min-h-[100dvh] flex flex-col">
-      <Navbar />
+  const metadataItems = [
+    ...(project.client ? [{ label: "CLIENT", value: project.client }] : []),
+    ...(project.role ? [{ label: "ROLE", value: project.role }] : []),
+    ...(project.focus ? [{ label: "FOCUS", value: project.focus }] : []),
+    ...(project.tools ? [{ label: "TOOLS", value: project.tools }] : []),
+    ...((project as { phase?: string }).phase
+      ? [{ label: "PHASE", value: (project as { phase?: string }).phase as string }]
+      : []),
+    ...((project as { startsOn?: string }).startsOn
+      ? [{
+          label: "PROGRAMME",
+          value: `${(project as { startsOn?: string }).startsOn}${(project as { endsOn?: string }).endsOn ? ` → ${(project as { endsOn?: string }).endsOn}` : ""}`,
+        }]
+      : []),
+  ];
 
-      <main className="flex-1 flex flex-col">
+  return (
+    <PublicLayout>
 
         {/* 1. HEADER — title + back nav */}
         <motion.div
@@ -195,7 +203,7 @@ export default function ProjectDetail() {
             <h1 className="text-2xl md:text-4xl font-bold uppercase tracking-tighter text-primary">
               {project.title}
             </h1>
-            <p className="text-muted-foreground mt-1">{project.subtitle}</p>
+            <p className="text-muted-foreground mt-1 whitespace-pre-wrap">{project.subtitle}</p>
           </div>
         </motion.div>
 
@@ -216,33 +224,21 @@ export default function ProjectDetail() {
         )}
 
         {/* 3. METADATA STRIP — context (Client, Role, Focus, Tools) */}
-        <motion.div
-          className="grid grid-cols-2 md:grid-cols-4 divide-x divide-border border-b border-border bg-muted/20"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.4, delay: 0.15 }}
-        >
-          {[
-            { label: "CLIENT", value: project.client },
-            { label: "ROLE", value: project.role },
-            { label: "FOCUS", value: project.focus },
-            { label: "TOOLS", value: project.tools },
-            ...((project as { phase?: string }).phase
-              ? [{ label: "PHASE", value: (project as { phase?: string }).phase as string }]
-              : []),
-            ...((project as { startsOn?: string }).startsOn
-              ? [{
-                  label: "PROGRAMME",
-                  value: `${(project as { startsOn?: string }).startsOn}${(project as { endsOn?: string }).endsOn ? ` → ${(project as { endsOn?: string }).endsOn}` : ""}`,
-                }]
-              : []),
-          ].map((item) => (
-            <div key={item.label} className="p-4 border-b md:border-b-0 border-border">
-              <span className="mono text-[10px] text-muted-foreground uppercase block mb-1">{item.label}</span>
-              <span className="mono text-sm font-bold text-foreground">{item.value}</span>
-            </div>
-          ))}
-        </motion.div>
+        {metadataItems.length > 0 && (
+          <motion.div
+            className="grid grid-cols-2 md:grid-cols-4 divide-x divide-border border-b border-border bg-muted/20"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.4, delay: 0.15 }}
+          >
+            {metadataItems.map((item) => (
+              <div key={item.label} className="p-4 border-b md:border-b-0 border-border">
+                <span className="mono text-[10px] text-muted-foreground uppercase block mb-1">{item.label}</span>
+                <span className="mono text-sm font-bold text-foreground">{item.value}</span>
+              </div>
+            ))}
+          </motion.div>
+        )}
 
         {/* 4. HIGHLIGHT STATS */}
         {p?.highlightStats && p.highlightStats.length > 0 && (
@@ -306,7 +302,7 @@ export default function ProjectDetail() {
                     </div>
                     <div className="pl-10">
                       <h3 className="font-bold text-primary uppercase text-sm mb-2">{step.title}</h3>
-                      <p className="text-sm text-foreground leading-relaxed">{step.description}</p>
+                      <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{step.description}</p>
                     </div>
                   </motion.div>
                 ))}
@@ -395,9 +391,6 @@ export default function ProjectDetail() {
           </motion.div>
         )}
 
-      </main>
-
-      <Footer />
-    </div>
+    </PublicLayout>
   );
 }

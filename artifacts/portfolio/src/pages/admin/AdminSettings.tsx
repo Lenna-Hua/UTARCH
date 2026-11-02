@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { useGetSettings, useUpdateSettings, getGetSettingsQueryKey } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -10,8 +10,10 @@ import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { siteSettingsSchema } from "@/lib/schemas";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Plus, Trash2, Loader2 } from "lucide-react";
+import { Plus, Trash2, Loader2, ImageIcon, Image } from "lucide-react";
 import { Uploader } from "@/components/ui/uploader";
+import { ImagePicker } from "@/components/ui/image-picker";
+import { MediaGalleryModal } from "@/components/ui/media-gallery-modal";
 
 const PRESET_COLORS = [
   { label: "Crimson Red", primary: "#C0392B", accent: "#2D2D2D" },
@@ -27,6 +29,8 @@ export default function AdminSettings() {
   const queryClient = useQueryClient();
   const { data: settings, isLoading } = useGetSettings();
   const updateSettings = useUpdateSettings();
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [lastUploadedUrl, setLastUploadedUrl] = useState<string | null>(null);
 
   const form = useForm({
     resolver: zodResolver(siteSettingsSchema),
@@ -209,7 +213,18 @@ export default function AdminSettings() {
                     <FormItem><FormLabel>Hero Subtitle</FormLabel><FormControl><Input className="rounded-none" {...field} /></FormControl><FormMessage /></FormItem>
                   )} />
                   <FormField control={form.control} name="heroImage" render={({ field }) => (
-                    <FormItem><FormLabel>Hero Background Image URL</FormLabel><FormControl><Input className="rounded-none" {...field} value={field.value || ""} /></FormControl><FormMessage /></FormItem>
+                    <FormItem>
+                      <FormLabel>Hero Background Image</FormLabel>
+                      <FormControl>
+                        <ImagePicker
+                          value={field.value}
+                          onChange={field.onChange}
+                          modalTitle="SELECT_HERO_IMAGE"
+                          aspectRatio="wide"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
                   )} />
                 </div>
 
@@ -287,16 +302,59 @@ export default function AdminSettings() {
           </div>
           
           <div className="xl:col-span-1">
-            <div className="sticky top-4">
-              <h3 className="font-bold text-sm uppercase mono mb-4 text-primary">IMAGE_UPLOADER</h3>
-              <Uploader />
-              <p className="text-xs text-muted-foreground mt-4">
-                Upload a new Hero image and copy the URL into the Hero Image field above.
-              </p>
+            <div className="sticky top-4 space-y-4">
+              <div className="border border-border p-4 bg-muted/10 space-y-3">
+                <h3 className="font-bold text-sm uppercase mono text-primary">MEDIA_GALLERY</h3>
+                <p className="text-xs text-muted-foreground">
+                  Browse your Cloudinary gallery to select an image for your site branding.
+                </p>
+                <Button
+                  type="button"
+                  onClick={() => setGalleryOpen(true)}
+                  className="w-full rounded-none mono font-bold text-xs uppercase bg-primary hover:bg-accent text-white h-9"
+                >
+                  <ImageIcon className="w-4 h-4 mr-2" /> Open Media Gallery
+                </Button>
+              </div>
+
+              <div className="space-y-3">
+                <h3 className="font-bold text-sm uppercase mono text-primary">DIRECT_UPLOAD</h3>
+                <Uploader onUploadComplete={(url) => setLastUploadedUrl(url)} />
+
+                {lastUploadedUrl && (
+                  <div className="border border-border p-3 bg-muted/20 space-y-2 animate-in fade-in-0 duration-200">
+                    <p className="text-xs mono font-bold text-primary uppercase">Quick-apply uploaded image:</p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="w-full rounded-none justify-start text-xs h-8"
+                      onClick={() => {
+                        form.setValue("heroImage", lastUploadedUrl, { shouldDirty: true });
+                        toast({ title: "Set as Hero Image" });
+                      }}
+                    >
+                      <Image className="w-3.5 h-3.5 mr-2 text-primary" /> Set as Hero Image
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* MODAL: GALLERY */}
+      <MediaGalleryModal
+        open={galleryOpen}
+        onClose={() => setGalleryOpen(false)}
+        title="CLOUDINARY_MEDIA_GALLERY"
+        onSelect={(url) => {
+          form.setValue("heroImage", url, { shouldDirty: true });
+          setGalleryOpen(false);
+          toast({ title: "Hero background image updated" });
+        }}
+      />
     </AdminLayout>
   );
 }

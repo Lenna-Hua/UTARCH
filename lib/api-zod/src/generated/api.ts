@@ -64,13 +64,13 @@ export const ListProjectsResponse = zod.array(ListProjectsResponseItem);
  * @summary Create a project (admin)
  */
 export const CreateProjectBody = zod.object({
-  title: zod.string(),
-  client: zod.string(),
-  subtitle: zod.string(),
+  title: zod.string().optional(),
+  client: zod.string().optional(),
+  subtitle: zod.string().optional(),
   category: zod.string().optional(),
-  role: zod.string(),
-  focus: zod.string(),
-  tools: zod.string(),
+  role: zod.string().optional(),
+  focus: zod.string().optional(),
+  tools: zod.string().optional(),
   coverImage: zod.string().nullish(),
   heroImage: zod.string().nullish(),
   description: zod.string().nullish(),

@@ -65719,13 +65719,13 @@ var ListProjectsResponseItem = objectType({
 });
 var ListProjectsResponse = arrayType(ListProjectsResponseItem);
 var CreateProjectBody = objectType({
-  title: stringType(),
-  client: stringType(),
-  subtitle: stringType(),
+  title: stringType().optional(),
+  client: stringType().optional(),
+  subtitle: stringType().optional(),
   category: stringType().optional(),
-  role: stringType(),
-  focus: stringType(),
-  tools: stringType(),
+  role: stringType().optional(),
+  focus: stringType().optional(),
+  tools: stringType().optional(),
   coverImage: stringType().nullish(),
   heroImage: stringType().nullish(),
   description: stringType().nullish(),
@@ -86200,13 +86200,13 @@ var createInsertSchema = (entity, refine2) => {
 // ../../lib/db/src/schema/projects.ts
 var projectsTable = pgTable("projects", {
   id: serial("id").primaryKey(),
-  title: text("title").notNull(),
-  client: text("client").notNull(),
-  subtitle: text("subtitle").notNull(),
+  title: text("title").notNull().default("Untitled Project"),
+  client: text("client").notNull().default(""),
+  subtitle: text("subtitle").notNull().default(""),
   category: text("category").notNull().default(""),
-  role: text("role").notNull(),
-  focus: text("focus").notNull(),
-  tools: text("tools").notNull(),
+  role: text("role").notNull().default(""),
+  focus: text("focus").notNull().default(""),
+  tools: text("tools").notNull().default(""),
   coverImage: text("cover_image"),
   heroImage: text("hero_image"),
   description: text("description"),
@@ -87360,7 +87360,7 @@ function mapProject(p) {
 }
 function pickProjectFields(body, mode) {
   const data = {};
-  if (body.title !== void 0) data.title = body.title;
+  if (body.title !== void 0) data.title = body.title.trim() || "Untitled Project";
   if (body.client !== void 0) data.client = body.client;
   if (body.subtitle !== void 0) data.subtitle = body.subtitle;
   if (body.category !== void 0) data.category = body.category;
@@ -87381,17 +87381,14 @@ function pickProjectFields(body, mode) {
   if (body.endsOn !== void 0) data.endsOn = body.endsOn;
   if (body.phase !== void 0) data.phase = body.phase;
   if (mode === "create") {
-    if (!body.title || !body.client || !body.subtitle || !body.role || !body.focus || !body.tools) {
-      return null;
-    }
     return {
-      title: body.title,
-      client: body.client,
-      subtitle: body.subtitle,
+      title: body.title && body.title.trim() || "Untitled Project",
+      client: body.client ?? "",
+      subtitle: body.subtitle ?? "",
       category: body.category ?? "",
-      role: body.role,
-      focus: body.focus,
-      tools: body.tools,
+      role: body.role ?? "",
+      focus: body.focus ?? "",
+      tools: body.tools ?? "",
       coverImage: body.coverImage ?? null,
       heroImage: body.heroImage ?? null,
       description: body.description ?? null,
@@ -87401,7 +87398,7 @@ function pickProjectFields(body, mode) {
       galleryImages: body.galleryImages ?? [],
       plans: body.plans ?? [],
       sortOrder: body.sortOrder ?? 0,
-      published: body.published ?? false,
+      published: body.published ?? true,
       startsOn: body.startsOn ?? "",
       endsOn: body.endsOn ?? "",
       phase: body.phase ?? ""
@@ -87452,10 +87449,6 @@ router4.get("/projects/:id", async (req, res) => {
 });
 router4.post("/projects", requireAdmin, async (req, res) => {
   const values = pickProjectFields(req.body, "create");
-  if (!values) {
-    res.status(400).json({ error: "Missing required fields" });
-    return;
-  }
   try {
     const inserted = await db.insert(projectsTable).values({ ...values, createdBy: sessionUserId(req) }).returning();
     res.status(201).json(mapProject(inserted[0]));
@@ -87868,6 +87861,85 @@ function uploadBuffer(buffer, opts) {
     Readable.from(buffer).pipe(stream);
   });
 }
+async function listCloudinaryImages(options) {
+  if (!configureFromEnv()) {
+    throw new Error("Cloudinary is not configured");
+  }
+  const maxResults = Math.min(Math.max(options?.maxResults || 40, 1), 100);
+  const rawFolder = options?.folder?.trim();
+  const folder = rawFolder === "all" ? "" : rawFolder !== void 0 && rawFolder !== "" ? rawFolder : process.env.CLOUDINARY_FOLDER?.trim() || "utarch";
+  const search = options?.search?.trim();
+  if (search) {
+    const sanitized = search.replace(/[^a-zA-Z0-9_\-\*\.]/g, "");
+    let expression = "resource_type:image";
+    if (folder) {
+      expression += ` AND folder:${folder}*`;
+    }
+    if (sanitized) {
+      expression += ` AND (${sanitized}* OR filename:${sanitized}* OR public_id:${sanitized}*)`;
+    }
+    const searchBuilder = import_cloudinary.v2.search.expression(expression).sort_by("created_at", "desc").max_results(maxResults);
+    if (options?.nextCursor) {
+      searchBuilder.next_cursor(options.nextCursor);
+    }
+    const res2 = await searchBuilder.execute();
+    const resources2 = (res2.resources || []).map((r) => ({
+      publicId: r.public_id,
+      url: r.url,
+      secureUrl: r.secure_url,
+      format: r.format || "",
+      width: r.width || 0,
+      height: r.height || 0,
+      bytes: r.bytes || 0,
+      createdAt: r.created_at || (/* @__PURE__ */ new Date()).toISOString(),
+      filename: r.display_name || r.filename || r.public_id.split("/").pop() || r.public_id
+    }));
+    return {
+      resources: resources2,
+      nextCursor: res2.next_cursor,
+      totalCount: res2.total_count
+    };
+  }
+  const queryOpts = {
+    type: "upload",
+    resource_type: "image",
+    max_results: maxResults,
+    direction: "desc"
+  };
+  if (folder) {
+    queryOpts.prefix = folder;
+  }
+  if (options?.nextCursor) {
+    queryOpts.next_cursor = options.nextCursor;
+  }
+  const res = await import_cloudinary.v2.api.resources(queryOpts);
+  const resources = (res.resources || []).map((r) => ({
+    publicId: r.public_id,
+    url: r.url,
+    secureUrl: r.secure_url,
+    format: r.format || "",
+    width: r.width || 0,
+    height: r.height || 0,
+    bytes: r.bytes || 0,
+    createdAt: r.created_at || (/* @__PURE__ */ new Date()).toISOString(),
+    filename: r.display_name || r.public_id.split("/").pop() || r.public_id
+  }));
+  return {
+    resources,
+    nextCursor: res.next_cursor,
+    totalCount: res.total_count
+  };
+}
+async function deleteCloudinaryImage(publicId) {
+  if (!configureFromEnv()) {
+    throw new Error("Cloudinary is not configured");
+  }
+  const res = await import_cloudinary.v2.uploader.destroy(publicId, {
+    resource_type: "image",
+    invalidate: true
+  });
+  return res;
+}
 
 // src/routes/uploads.ts
 var router8 = (0, import_express8.Router)();
@@ -87880,7 +87952,7 @@ var ALLOWED_MIME = /* @__PURE__ */ new Set([
 ]);
 var upload = (0, import_multer.default)({
   storage: import_multer.default.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 },
+  limits: { fileSize: 15 * 1024 * 1024 },
   fileFilter(_req, file2, cb) {
     if (ALLOWED_MIME.has(file2.mimetype)) {
       cb(null, true);
@@ -87907,14 +87979,64 @@ router8.post("/uploads", requireAdmin, (req, res) => {
       return;
     }
     try {
-      const { mimetype, buffer } = req.file;
-      const result = await uploadBuffer(buffer, { mimetype });
-      res.json({ url: result.url, key: result.publicId });
+      const { mimetype, buffer, originalname } = req.file;
+      const result = await uploadBuffer(buffer, {
+        mimetype,
+        filename: originalname
+      });
+      res.json({
+        url: result.url,
+        key: result.publicId,
+        publicId: result.publicId,
+        originalName: originalname
+      });
     } catch (uploadErr) {
       req.log.error({ err: uploadErr }, "Error uploading file");
       res.status(500).json({ error: "Upload failed" });
     }
   });
+});
+router8.get("/uploads", requireAdmin, async (req, res) => {
+  if (!isCloudinaryConfigured()) {
+    res.status(503).json({
+      error: "File uploads are not configured. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET."
+    });
+    return;
+  }
+  try {
+    const maxResults = req.query.maxResults ? parseInt(String(req.query.maxResults), 10) : 40;
+    const nextCursor = req.query.nextCursor ? String(req.query.nextCursor) : void 0;
+    const folder = req.query.folder ? String(req.query.folder) : void 0;
+    const search = req.query.search ? String(req.query.search) : void 0;
+    const data = await listCloudinaryImages({
+      maxResults,
+      nextCursor,
+      folder,
+      search
+    });
+    res.json(data);
+  } catch (err) {
+    req.log.error({ err }, "Error listing uploads");
+    res.status(500).json({ error: err.message || "Failed to list media" });
+  }
+});
+router8.delete("/uploads", requireAdmin, async (req, res) => {
+  if (!isCloudinaryConfigured()) {
+    res.status(503).json({ error: "Cloudinary is not configured." });
+    return;
+  }
+  const publicId = req.body?.publicId || req.query?.publicId;
+  if (!publicId) {
+    res.status(400).json({ error: "publicId is required" });
+    return;
+  }
+  try {
+    const result = await deleteCloudinaryImage(publicId);
+    res.json({ success: true, result });
+  } catch (err) {
+    req.log.error({ err }, "Error deleting upload");
+    res.status(500).json({ error: err.message || "Failed to delete image" });
+  }
 });
 var uploads_default = router8;
 
