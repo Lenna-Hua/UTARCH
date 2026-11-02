@@ -1,48 +1,50 @@
 import { Link, useLocation } from "wouter";
-import { useAdminLogout, useAdminMe } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Loader2, LogOut, LayoutDashboard, FolderKanban, FileText, Wrench, Settings, Upload, Building2 } from "lucide-react";
 import { useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { studioJson, type AuthMe } from "@/lib/studio-api";
 
 export function AdminLayout({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
-  const { data: auth, isLoading } = useAdminMe({
-    query: {
-      refetchOnMount: "always",
-      staleTime: 0,
-    }
-  });
-  const logout = useAdminLogout();
   const { toast } = useToast();
-  const { data: me } = useQuery({
+  const queryClient = useQueryClient();
+
+  const { data: me, isLoading } = useQuery({
     queryKey: ["auth-me"],
     queryFn: () => studioJson<AuthMe>("/api/auth/me"),
-    enabled: Boolean(auth?.authenticated),
+    refetchOnMount: "always",
+    staleTime: 10_000,
+    retry: 1,
   });
 
   useEffect(() => {
-    if (!isLoading && !auth?.authenticated) {
-      setLocation("/admin/login");
+    if (!isLoading && me && !me.authenticated) {
+      window.location.href = "/admin/login";
     }
-  }, [auth, isLoading, setLocation]);
+  }, [me, isLoading]);
 
-  const handleLogout = () => {
-    logout.mutate(undefined, {
-      onSuccess: () => {
-        setLocation("/");
-        toast({ title: "Logged out successfully" });
-      }
-    });
+  const handleLogout = async () => {
+    try {
+      await studioJson("/api/auth/logout", { method: "POST" });
+    } catch {
+      // ignore
+    } finally {
+      queryClient.setQueryData(["auth-me"], { authenticated: false, user: null });
+      window.location.href = "/admin/login";
+    }
   };
 
   if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="animate-spin text-primary" />
+      </div>
+    );
   }
 
-  if (!auth?.authenticated) return null;
+  if (!me?.authenticated) return null;
 
   const navItems = [
     { href: "/admin", label: "Dashboard", icon: LayoutDashboard },

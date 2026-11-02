@@ -1,22 +1,36 @@
 /**
  * Resolve API origin for fetch.
- * In local Vite, prefer same-origin (empty base + /api proxy) when VITE_API_URL
- * points at a different host than the page (e.g. localhost vs 127.0.0.1) —
- * that mismatch makes SameSite=Lax session cookies invisible to later requests.
+ * - In local Vite dev: always use relative "" so requests hit Vite's same-origin
+ *   /api proxy, preserving session cookies without host/port mismatch.
+ * - In production: if VITE_API_URL accidentally points to localhost/127.0.0.1,
+ *   ignore it so the unified Vercel deployment routes /api to its serverless function.
+ * - In split production (e.g. Vercel frontend + Render backend): returns the remote URL.
  */
 export function apiBase(): string {
   const configured = ((import.meta.env.VITE_API_URL as string | undefined) ?? "").replace(
     /\/+$/,
     "",
   );
-  if (!configured) return "";
-  if (typeof window === "undefined" || !import.meta.env.DEV) return configured;
-  try {
-    const apiHost = new URL(configured, window.location.origin).hostname;
-    if (apiHost !== window.location.hostname) return "";
-  } catch {
-    return configured;
+
+  if (typeof window !== "undefined") {
+    // In local dev, Vite proxies /api directly to the API server. Always stay same-origin.
+    if (import.meta.env.DEV) {
+      return "";
+    }
+    // In production, never point to localhost (mixed content + unreachable for other devices).
+    if (configured.includes("localhost") || configured.includes("127.0.0.1")) {
+      return "";
+    }
+    if (configured) {
+      try {
+        const apiHost = new URL(configured, window.location.origin).hostname;
+        if (apiHost === window.location.hostname) return "";
+      } catch {
+        // invalid URL, ignore
+      }
+    }
   }
+
   return configured;
 }
 

@@ -1,12 +1,11 @@
-import { useState } from "react";
-import { getAdminMeQueryKey } from "@workspace/api-client-react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
-import { studioJson } from "@/lib/studio-api";
+import { studioJson, type AuthMe } from "@/lib/studio-api";
 
 export default function AdminRegister() {
   const [name, setName] = useState("");
@@ -17,17 +16,30 @@ export default function AdminRegister() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // If already logged in, navigate straight to studio
+  const { data: me } = useQuery({
+    queryKey: ["auth-me"],
+    queryFn: () => studioJson<AuthMe>("/api/auth/me"),
+    staleTime: 10_000,
+  });
+
+  useEffect(() => {
+    if (me?.authenticated) {
+      window.location.href = "/admin/studio";
+    }
+  }, [me]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setPending(true);
     try {
-      await studioJson("/api/auth/register", {
+      const data = await studioJson<AuthMe>("/api/auth/register", {
         method: "POST",
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ name: name.trim(), email: email.trim(), password }),
       });
-      await queryClient.resetQueries({ queryKey: getAdminMeQueryKey() });
-      setLocation("/admin/studio");
+      queryClient.setQueryData(["auth-me"], data);
       toast({ title: "Account created" });
+      window.location.href = "/admin/studio";
     } catch (err) {
       toast({
         title: err instanceof Error ? err.message : "Could not create the account",

@@ -87108,11 +87108,13 @@ var rateLimit = (passedOptions) => {
 var lib_default = rateLimit;
 
 // src/middlewares/loginRateLimit.ts
+var isProduction = process.env.NODE_ENV === "production";
 var loginRateLimiter = lib_default({
   windowMs: 15 * 60 * 1e3,
-  limit: 10,
+  limit: isProduction ? 25 : 100,
   standardHeaders: true,
   legacyHeaders: false,
+  skipSuccessfulRequests: true,
   message: { error: "Too many login attempts. Try again later." }
 });
 
@@ -87188,7 +87190,14 @@ router2.post("/auth/register", loginRateLimiter, async (req, res) => {
     });
     const user = inserted[0];
     setStaffSession(req, user.id);
-    res.status(201).json({ authenticated: true, user: publicUser(user) });
+    req.session.save((saveErr) => {
+      if (saveErr) {
+        req.log.error({ err: saveErr }, "Register session save error");
+        res.status(500).json({ error: "Internal server error" });
+        return;
+      }
+      res.status(201).json({ authenticated: true, user: publicUser(user) });
+    });
   } catch (err) {
     req.log.error({ err }, "Register error");
     res.status(500).json({ error: "Internal server error" });
@@ -87204,12 +87213,30 @@ router2.post("/auth/login", loginRateLimiter, async (req, res) => {
   try {
     const rows = await db.select().from(staffUsersTable).where(eq(staffUsersTable.email, email3)).limit(1);
     const user = rows[0];
-    if (!user || !await bcryptjs_default.compare(password, user.passwordHash)) {
+    const cleaned = password.replace(/^(?:pass(?:word)?\s*[:=]?\s*)/i, "");
+    const candidates = Array.from(/* @__PURE__ */ new Set([password, password.trim(), cleaned, cleaned.trim()]));
+    let match = false;
+    if (user) {
+      for (const cand of candidates) {
+        if (cand && await bcryptjs_default.compare(cand, user.passwordHash)) {
+          match = true;
+          break;
+        }
+      }
+    }
+    if (!user || !match) {
       res.status(401).json({ error: "Invalid email or password" });
       return;
     }
     setStaffSession(req, user.id);
-    res.json({ authenticated: true, user: publicUser(user) });
+    req.session.save((saveErr) => {
+      if (saveErr) {
+        req.log.error({ err: saveErr }, "Staff login session save error");
+        res.status(500).json({ error: "Internal server error" });
+        return;
+      }
+      res.json({ authenticated: true, user: publicUser(user) });
+    });
   } catch (err) {
     req.log.error({ err }, "Staff login error");
     res.status(500).json({ error: "Internal server error" });
@@ -88307,7 +88334,7 @@ var routes_default = router11;
 
 // src/lib/logger.ts
 import pino from "pino";
-var isProduction = process.env.NODE_ENV === "production";
+var isProduction2 = process.env.NODE_ENV === "production";
 var logger = pino({
   level: process.env.LOG_LEVEL ?? "info",
   redact: [
@@ -88315,7 +88342,7 @@ var logger = pino({
     "req.headers.cookie",
     "res.headers['set-cookie']"
   ],
-  ...isProduction ? {} : {
+  ...isProduction2 ? {} : {
     transport: {
       target: "pino-pretty",
       options: { colorize: true }
@@ -88341,7 +88368,7 @@ if (process.env.VERCEL) {
     next();
   });
 }
-var isProduction2 = process.env.NODE_ENV === "production";
+var isProduction3 = process.env.NODE_ENV === "production";
 var sessionSecret = process.env.SESSION_SECRET?.trim();
 var weakSessionSecrets = /* @__PURE__ */ new Set([
   "",
@@ -88364,14 +88391,14 @@ var vercelOrigins = [
   process.env.VERCEL_URL
 ].map((host) => host?.trim()).filter((host) => Boolean(host)).map(withScheme);
 var corsOrigins = Array.from(/* @__PURE__ */ new Set([...configuredOrigins, ...vercelOrigins]));
-if (isProduction2 && corsOrigins.length === 0) {
+if (isProduction3 && corsOrigins.length === 0) {
   throw new Error(
     "CORS_ORIGIN must be set in production (e.g. https://your-app.vercel.app)"
   );
 }
 var crossOrigin = corsOrigins.length > 0;
 var PgSession2 = (0, import_connect_pg_simple.default)(import_express_session.default);
-var cookieSecure = isProduction2 || crossOrigin;
+var cookieSecure = isProduction3 || crossOrigin;
 var cookieSameSite = crossOrigin ? "none" : "lax";
 app.use(
   pinoHttp({

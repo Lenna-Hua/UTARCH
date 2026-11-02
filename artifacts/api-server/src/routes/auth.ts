@@ -58,7 +58,14 @@ router.post("/auth/register", loginRateLimiter, async (req: Request, res: Respon
       });
     const user = inserted[0]!;
     setStaffSession(req, user.id);
-    res.status(201).json({ authenticated: true, user: publicUser(user) });
+    req.session.save((saveErr) => {
+      if (saveErr) {
+        req.log.error({ err: saveErr }, "Register session save error");
+        res.status(500).json({ error: "Internal server error" });
+        return;
+      }
+      res.status(201).json({ authenticated: true, user: publicUser(user) });
+    });
   } catch (err) {
     req.log.error({ err }, "Register error");
     res.status(500).json({ error: "Internal server error" });
@@ -80,12 +87,30 @@ router.post("/auth/login", loginRateLimiter, async (req: Request, res: Response)
       .where(eq(staffUsersTable.email, email))
       .limit(1);
     const user = rows[0];
-    if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
+    const cleaned = password.replace(/^(?:pass(?:word)?\s*[:=]?\s*)/i, "");
+    const candidates = Array.from(new Set([password, password.trim(), cleaned, cleaned.trim()]));
+    let match = false;
+    if (user) {
+      for (const cand of candidates) {
+        if (cand && (await bcrypt.compare(cand, user.passwordHash))) {
+          match = true;
+          break;
+        }
+      }
+    }
+    if (!user || !match) {
       res.status(401).json({ error: "Invalid email or password" });
       return;
     }
     setStaffSession(req, user.id);
-    res.json({ authenticated: true, user: publicUser(user) });
+    req.session.save((saveErr) => {
+      if (saveErr) {
+        req.log.error({ err: saveErr }, "Staff login session save error");
+        res.status(500).json({ error: "Internal server error" });
+        return;
+      }
+      res.json({ authenticated: true, user: publicUser(user) });
+    });
   } catch (err) {
     req.log.error({ err }, "Staff login error");
     res.status(500).json({ error: "Internal server error" });
